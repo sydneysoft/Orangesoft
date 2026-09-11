@@ -2,11 +2,12 @@ import "./globals.css";
 
 const products = [
   {
-    name: "Orange Chronicles",
+    name: "StoryLingo",
     tag: "Language Learning • Reading",
     description:
-      "A multilingual reading and language-learning experience built around stories, vocabulary practice, and immersive reading.",
+      "A multilingual reading and language-learning platform built around stories, vocabulary practice, grammar, pronunciation, audiobooks and interactive learning.",
     status: "Featured product",
+    href: "https://storylingo.uk",
   },
   {
     name: "More products",
@@ -36,6 +37,7 @@ export default function Home() {
           <a href="#products">Products</a>
           <a href="#services">Services</a>
           <a href="#about">About</a>
+          <a href="https://storylingo.uk" target="_blank" rel="noreferrer">StoryLingo</a>
         </nav>
         <a className="navCta" href="#contact">Contact</a>
       </header>
@@ -49,7 +51,7 @@ export default function Home() {
         </p>
         <div className="heroActions">
           <a className="primary" href="#products">Explore products</a>
-          <a className="secondary" href="#services">What we build</a>
+          <a className="secondary" href="https://storylingo.uk" target="_blank" rel="noreferrer">Visit StoryLingo</a>
         </div>
         <div className="heroPanel">
           <div><small>Company</small><strong>ORANGESOFT LTD</strong></div>
@@ -68,23 +70,24 @@ export default function Home() {
             <article className={`productCard ${i === 0 ? "featured" : ""}`} key={product.name}>
               <div className="productTop"><span>{product.tag}</span><span className="status">{product.status}</span></div>
               <div><h3>{product.name}</h3><p>{product.description}</p></div>
-              {i === 0 ? <a href="#chronicles">View product →</a> : <span className="muted">Portfolio expanding</span>}
+              {product.href ? <a href={product.href} target="_blank" rel="noreferrer">Visit StoryLingo →</a> : <span className="muted">Portfolio expanding</span>}
             </article>
           ))}
         </div>
       </section>
 
-      <section id="chronicles" className="spotlight">
+      <section id="storylingo" className="spotlight">
         <div className="shell spotlightInner">
           <div>
             <div className="eyebrow light">FEATURED PRODUCT</div>
-            <h2>Orange Chronicles</h2>
+            <h2>StoryLingo</h2>
             <p>A multilingual reading platform designed to make language learning feel like reading a real story—not completing a textbook exercise.</p>
-            <div className="chips"><span>Multilingual</span><span>Reading</span><span>Vocabulary</span><span>Practice</span></div>
+            <div className="chips"><span>Multilingual</span><span>Reading</span><span>Vocabulary</span><span>Practice</span><span>Audio</span></div>
+            <p><a href="https://storylingo.uk" target="_blank" rel="noreferrer">storylingo.uk →</a></p>
           </div>
           <div className="bookMock">
             <div className="bookLabel">AN ORANGESOFT PRODUCT</div>
-            <div className="bookTitle">ORANGE<br/>CHRONICLES</div>
+            <div className="bookTitle">STORY<br/>LINGO</div>
             <div className="bookSub">READ • LEARN • EXPLORE</div>
           </div>
         </div>
@@ -104,7 +107,7 @@ export default function Home() {
         <div><div className="eyebrow">ABOUT</div><h2>One company. Multiple products.</h2></div>
         <div className="aboutCopy">
           <p>OrangeSoft Ltd is the parent company behind a growing portfolio of software and digital products. Each product can have its own brand and audience while sharing the same technical and business foundation.</p>
-          <p>That structure lets OrangeSoft launch new ideas without forcing every product to look or feel the same.</p>
+          <p>StoryLingo is one of those products, focused on multilingual reading and language learning.</p>
         </div>
       </section>
 
