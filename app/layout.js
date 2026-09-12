@@ -1,3 +1,5 @@
+import RecaptchaFetchGuard from "./RecaptchaFetchGuard";
+
 export const metadata = {
   title: "OrangeSoft — Software, AI & Digital Products",
   description: "OrangeSoft Ltd builds software, AI-powered tools, and digital products.",
@@ -6,7 +8,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <RecaptchaFetchGuard />
+        {children}
+      </body>
     </html>
   );
 }
