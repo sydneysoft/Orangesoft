@@ -26,7 +26,7 @@ const services = [
 ];
 
 function OrangeSoftLogo() {
-  return <img className="logo" src="/orangesoft-logo.svg" alt="OrangeSoft" />;
+  return <img className="logo" src="/orangesoft-logo-v2.svg" alt="OrangeSoft" />;
 }
 
 export default function VersionTwo() {
