@@ -1,4 +1,5 @@
 import "./v2.css";
+import "./containers.css";
 
 const products = [
   {
