@@ -1,6 +1,12 @@
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const INKA_REFLECT_GUIDANCE = `You are ИНКА, Blueprint Local Brain. Answer ordinary requests directly and helpfully.
+If the request depends on current/live information that is not present in the provided tool context (for example nearby businesses, maps, opening hours, prices, availability, weather, or news), do not give a generic refusal. Clearly say that ИНКА does not currently have live web/maps access, state what cannot be verified, and still provide useful non-live guidance without inventing current facts.
+Treat dots in natural-language prompts as word separators when sensible. Use any LOCAL TOOL CONTEXT you receive as evidence. Keep the answer concise.
+
+USER REQUEST:\n`;
+
 function json(data, status = 200) {
   return Response.json(data, { status });
 }
@@ -55,6 +61,12 @@ export async function POST(request) {
     }, 409);
   }
 
+  const forwardedPlan = plan.map((step) => {
+    if (String(step?.type || "").toLowerCase() !== "reflect") return step;
+    const userRequest = String(step?.normalized || step?.body || raw).trim();
+    return { ...step, body: `${INKA_REFLECT_GUIDANCE}${userRequest}` };
+  });
+
   let base;
   try {
     base = bridgeUrl();
@@ -73,7 +85,7 @@ export async function POST(request) {
         "content-type": "application/json",
         "user-agent": "OrangeSoft-Blueprint-Local",
       },
-      body: JSON.stringify({ raw, plan }),
+      body: JSON.stringify({ raw, plan: forwardedPlan }),
       cache: "no-store",
       signal: controller.signal,
     });
@@ -103,6 +115,7 @@ export async function POST(request) {
       model: data?.model || "blueprint-local",
       local: true,
       tools: ["reflect", "inspect", "find"],
+      guidance: "inka-live-data-limit-v1",
     });
   } catch (error) {
     const message = error?.name === "AbortError"
