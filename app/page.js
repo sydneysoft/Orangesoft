@@ -25,13 +25,16 @@ const services = [
   "Digital publishing platforms",
 ];
 
+function OrangeSoftLogo() {
+  return <img className="logo" src="/orangesoft-logo.svg" alt="OrangeSoft" />;
+}
+
 export default function Home() {
   return (
     <main>
       <header className="nav shell">
         <a className="brand" href="#top" aria-label="OrangeSoft home">
-          <span className="mark">O</span>
-          <span>OrangeSoft</span>
+          <OrangeSoftLogo />
         </a>
         <nav>
           <a href="#products">Products</a>
@@ -117,7 +120,7 @@ export default function Home() {
       </section>
 
       <footer className="footer shell">
-        <div className="brand"><span className="mark">O</span><span>OrangeSoft</span></div>
+        <div className="brand"><OrangeSoftLogo /></div>
         <p>© 2026 ORANGESOFT LTD. All rights reserved.</p>
       </footer>
     </main>
