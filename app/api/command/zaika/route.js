@@ -18,6 +18,18 @@ function extractOutputText(data) {
   return chunks.join("\n").trim();
 }
 
+export async function GET() {
+  const model = String(process.env.BLUEPRINT_OPENAI_MODEL || "gpt-5.6-luna").trim();
+  return json({
+    ok: true,
+    provider: "openai",
+    model,
+    zaika: true,
+    configured: Boolean(String(process.env.OPENAI_API_KEY || "").trim()),
+    tools: ["reflect"],
+  });
+}
+
 export async function POST(request) {
   const configuredKey = process.env.BLUEPRINT_ACCESS_KEY;
   if (!configuredKey) {
