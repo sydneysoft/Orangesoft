@@ -1,0 +1,26 @@
+.v2 .bandRed .productCard,
+.v2 .bandRed .productCard.featured {
+  background: var(--black);
+  color: var(--orange);
+  border-color: var(--black);
+}
+
+.v2 .bandRed .productTop,
+.v2 .bandRed .productCard h3,
+.v2 .bandRed .productCard p,
+.v2 .bandRed .productCard a,
+.v2 .bandRed .productCard .muted {
+  color: var(--orange);
+}
+
+.v2 .bandOrange .bookMock {
+  background: var(--black);
+  color: var(--orange);
+  border-color: var(--black);
+}
+
+.v2 .bandOrange .bookTitle,
+.v2 .bandOrange .bookLabel,
+.v2 .bandOrange .bookSub {
+  color: var(--orange);
+}
