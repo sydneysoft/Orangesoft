@@ -42,14 +42,16 @@ export async function POST(request) {
     return json({ executed: false, output: "COMMAND IS EMPTY OR TOO LARGE." }, 400);
   }
 
-  const unsupported = plan.filter((step) => String(step?.type || "").toLowerCase() !== "reflect");
+  const allowed = new Set(["reflect", "inspect", "find"]);
+  const unsupported = plan.filter((step) => !allowed.has(String(step?.type || "").toLowerCase()));
   if (unsupported.length) {
     return json({
       executed: false,
-      output: "LOCAL BRAIN IS CONNECTED FOR REFLECT/REASONING ONLY. Repository inspection, file changes, search, and deployment still require CLOUD mode until local tool adapters are installed.",
+      output: "LOCAL READ TOOLS ARE ACTIVE. Use LOCAL for normal chat, reflect(...), inspect(...), and find(...). File changes and deployment still require CLOUD until the local write adapters are enabled.",
       provider: "ollama",
       model: "blueprint-local",
       local: true,
+      tools: ["reflect", "inspect", "find"],
     }, 409);
   }
 
@@ -85,24 +87,28 @@ export async function POST(request) {
       return json({
         executed: false,
         output: `LOCAL AGENT ERROR: ${detail}`,
+        activity: Array.isArray(data?.activity) ? data.activity : [],
         provider: "ollama",
         model: data?.model || "blueprint-local",
+        local: true,
+        tools: ["reflect", "inspect", "find"],
       }, response.status >= 400 && response.status < 600 ? response.status : 502);
     }
 
     return json({
       executed: true,
       output: String(data?.output || "LOCAL AGENT COMPLETED WITHOUT A TEXT RESPONSE."),
-      activity: [],
+      activity: Array.isArray(data?.activity) ? data.activity : [],
       provider: "ollama",
       model: data?.model || "blueprint-local",
       local: true,
+      tools: ["reflect", "inspect", "find"],
     });
   } catch (error) {
     const message = error?.name === "AbortError"
       ? "LOCAL BRIDGE TIMED OUT. CHECK THAT OLLAMA, THE BRIDGE, AND NGROK ARE RUNNING ON YOUR MAC."
       : `LOCAL BRIDGE UNREACHABLE: ${error instanceof Error ? error.message : String(error)}`;
-    return json({ executed: false, output: message, provider: "ollama", model: "blueprint-local" }, 503);
+    return json({ executed: false, output: message, provider: "ollama", model: "blueprint-local", tools: ["reflect", "inspect", "find"] }, 503);
   } finally {
     clearTimeout(timeout);
   }
