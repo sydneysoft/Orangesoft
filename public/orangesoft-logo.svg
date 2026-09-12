@@ -1,27 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 128" role="img" aria-labelledby="title desc">
   <title id="title">OrangeSoft</title>
-  <desc id="desc">OrangeSoft logo with an orange fruit symbol, leaf, and wordmark</desc>
+  <desc id="desc">OrangeSoft logo in black, red, and gold</desc>
   <defs>
-    <linearGradient id="orange" x1="21" y1="20" x2="94" y2="105" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFC35A"/>
-      <stop offset=".48" stop-color="#FF8A16"/>
-      <stop offset="1" stop-color="#E95300"/>
-    </linearGradient>
-    <linearGradient id="leaf" x1="63" y1="9" x2="91" y2="39" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#CBE86B"/>
-      <stop offset="1" stop-color="#4D8B2B"/>
+    <linearGradient id="fruit" x1="21" y1="20" x2="94" y2="105" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFCC00"/>
+      <stop offset=".52" stop-color="#DD0000"/>
+      <stop offset="1" stop-color="#000000"/>
     </linearGradient>
     <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#B63D00" flood-opacity=".2"/>
+      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#000000" flood-opacity=".28"/>
     </filter>
   </defs>
   <g filter="url(#shadow)">
-    <path d="M58 31C60 16 72 7 88 8c-2 15-13 25-28 26l-2-3Z" fill="url(#leaf)"/>
-    <path d="M58 32c8-10 17-16 28-19" fill="none" stroke="#407524" stroke-width="3.5" stroke-linecap="round"/>
-    <circle cx="52" cy="68" r="39" fill="url(#orange)"/>
-    <circle cx="52" cy="68" r="24" fill="none" stroke="#FFF7E9" stroke-width="7" opacity=".96"/>
-    <path d="M28 51c5-10 14-16 25-18" fill="none" stroke="#FFE5B4" stroke-width="6" stroke-linecap="round" opacity=".75"/>
-    <path d="M75 47c7 16 2 34-12 43" fill="none" stroke="#C94300" stroke-width="5" stroke-linecap="round" opacity=".28"/>
+    <path d="M58 31C60 16 72 7 88 8c-2 15-13 25-28 26l-2-3Z" fill="#FFCC00"/>
+    <path d="M58 32c8-10 17-16 28-19" fill="none" stroke="#000000" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="52" cy="68" r="39" fill="url(#fruit)"/>
+    <circle cx="52" cy="68" r="24" fill="none" stroke="#FFCC00" stroke-width="7" opacity=".96"/>
+    <path d="M28 51c5-10 14-16 25-18" fill="none" stroke="#000000" stroke-width="6" stroke-linecap="round" opacity=".75"/>
+    <path d="M75 47c7 16 2 34-12 43" fill="none" stroke="#DD0000" stroke-width="5" stroke-linecap="round" opacity=".75"/>
   </g>
-  <text x="122" y="84" fill="#161616" font-family="Arial, Helvetica, sans-serif" font-size="62" font-weight="800" letter-spacing="-3.5">Orange<tspan fill="#EF6900">Soft</tspan></text>
+  <text x="122" y="84" fill="#000000" font-family="Arial, Helvetica, sans-serif" font-size="62" font-weight="800" letter-spacing="-3.5">Orange<tspan fill="#DD0000">Soft</tspan></text>
 </svg>
