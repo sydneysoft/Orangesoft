@@ -42,6 +42,17 @@ export async function POST(request) {
     return json({ executed: false, output: "COMMAND IS EMPTY OR TOO LARGE." }, 400);
   }
 
+  const unsupported = plan.filter((step) => String(step?.type || "").toLowerCase() !== "reflect");
+  if (unsupported.length) {
+    return json({
+      executed: false,
+      output: "LOCAL BRAIN IS CONNECTED FOR REFLECT/REASONING ONLY. Repository inspection, file changes, search, and deployment still require CLOUD mode until local tool adapters are installed.",
+      provider: "ollama",
+      model: "blueprint-local",
+      local: true,
+    }, 409);
+  }
+
   let base;
   try {
     base = bridgeUrl();
