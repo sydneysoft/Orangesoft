@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const OPENAI_URL = "https://api.openai.com/v1/responses";
+const GROQ_RESPONSES_URL = "https://api.groq.com/openai/v1/responses";
 const DEFAULT_ALLOWED_REPOS = ["sydneysoft/Orangesoft", "sydneysoft/hellboychronicles"];
 const MAX_FILE_BYTES = 400_000;
 const MAX_AGENT_ROUNDS = 8;
@@ -19,9 +19,7 @@ function allowedRepos() {
 }
 
 function requireRepo(repo) {
-  if (!allowedRepos().has(repo)) {
-    throw new Error(`Repository not allowed: ${repo}`);
-  }
+  if (!allowedRepos().has(repo)) throw new Error(`Repository not allowed: ${repo}`);
 }
 
 function requireSafePath(path) {
@@ -114,6 +112,7 @@ async function writeRepoFile({ repo, path, content, commit_message, branch = "ma
     branch,
     ...(sha ? { sha } : {}),
   };
+
   const result = await githubRequest(
     `https://api.github.com/repos/${repo}/contents/${encodedPath(clean)}`,
     { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }
@@ -212,11 +211,11 @@ async function callTool(item) {
   throw new Error(`Unknown tool: ${item.name}`);
 }
 
-async function openAI(body) {
-  const response = await fetch(OPENAI_URL, {
+async function groq(body) {
+  const response = await fetch(GROQ_RESPONSES_URL, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
@@ -225,7 +224,7 @@ async function openAI(body) {
   const text = await response.text();
   let data;
   try { data = JSON.parse(text); } catch { data = { error: { message: text } }; }
-  if (!response.ok) throw new Error(`OpenAI API failed (${response.status}): ${data?.error?.message || "unknown error"}`);
+  if (!response.ok) throw new Error(`Groq API failed (${response.status}): ${data?.error?.message || "unknown error"}`);
   return data;
 }
 
@@ -246,12 +245,13 @@ export async function POST(request) {
   if (!configuredKey) {
     return json({ executed: false, output: "AGENT BACKEND EXISTS, BUT BLUEPRINT_ACCESS_KEY IS NOT CONFIGURED ON THE SERVER." }, 503);
   }
+
   const suppliedKey = request.headers.get("x-blueprint-key") || "";
   if (suppliedKey !== configuredKey) {
     return json({ executed: false, output: "AGENT AUTH REQUIRED. ENTER THE BLUEPRINT ACCESS KEY." }, 401);
   }
-  if (!process.env.OPENAI_API_KEY) {
-    return json({ executed: false, output: "OPENAI_API_KEY IS NOT CONFIGURED ON THE SERVER." }, 503);
+  if (!process.env.GROQ_API_KEY) {
+    return json({ executed: false, output: "GROQ_API_KEY IS NOT CONFIGURED ON THE SERVER." }, 503);
   }
   if (!process.env.BLUEPRINT_GITHUB_TOKEN) {
     return json({ executed: false, output: "BLUEPRINT_GITHUB_TOKEN IS NOT CONFIGURED ON THE SERVER." }, 503);
@@ -279,14 +279,13 @@ Rules:
 5. Prefer small targeted edits. Preserve existing functionality unless the command requests otherwise.
 6. For a requested logo or simple visual asset, you may create a polished SVG in the appropriate public folder and update the site to use it if the command clearly implies that.
 7. Never say a change happened unless a write_repo_file tool call succeeded.
-8. Finish with a compact technical report: interpreted request, files inspected, files changed, commit SHA(s), deployment trigger status, and verification status.
-`;
+8. Finish with a compact technical report: interpreted request, files inspected, files changed, commit SHA(s), deployment trigger status, and verification status.`;
 
   const userInput = `RAW BLUEPRINT COMMAND:\n${raw}\n\nPARSED PROGRAM:\n${JSON.stringify(plan, null, 2)}`;
-  const model = process.env.BLUEPRINT_MODEL || "gpt-5.6-terra";
+  const model = process.env.BLUEPRINT_GROQ_MODEL || "openai/gpt-oss-120b";
 
   try {
-    let response = await openAI({ model, instructions, tools, input: userInput });
+    let response = await groq({ model, instructions, tools, input: userInput });
     const activity = [];
 
     for (let round = 0; round < MAX_AGENT_ROUNDS; round++) {
@@ -296,6 +295,7 @@ Rules:
           executed: true,
           output: responseText(response) || "AGENT COMPLETED WITHOUT A TEXT SUMMARY.",
           activity,
+          provider: "groq",
           model,
         });
       }
@@ -313,7 +313,7 @@ Rules:
         }
       }
 
-      response = await openAI({
+      response = await groq({
         model,
         instructions,
         tools,
@@ -322,9 +322,9 @@ Rules:
       });
     }
 
-    return json({ executed: false, output: "AGENT STOPPED AFTER THE MAXIMUM TOOL-CALL ROUNDS TO PREVENT AN UNBOUNDED EXECUTION LOOP.", activity }, 508);
+    return json({ executed: false, output: "AGENT STOPPED AFTER THE MAXIMUM TOOL-CALL ROUNDS TO PREVENT AN UNBOUNDED EXECUTION LOOP.", activity, provider: "groq", model }, 508);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return json({ executed: false, output: `AGENT ERROR: ${message}` }, 500);
+    return json({ executed: false, output: `AGENT ERROR: ${message}`, provider: "groq", model }, 500);
   }
 }
