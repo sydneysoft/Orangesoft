@@ -9,11 +9,12 @@ const CHAT_RESERVE = 7_500;
 
 function splitMemory(value) {
   const text = String(value || "").trim();
-  const index = text.indexOf(AUTO_MARKER.trim());
+  const marker = AUTO_MARKER.trim();
+  const index = text.indexOf(marker);
   if (index < 0) return { base: text, chat: "" };
   return {
     base: text.slice(0, index).trim(),
-    chat: text.slice(index + AUTO_MARKER.trim().length).trim(),
+    chat: text.slice(index + marker.length).trim(),
   };
 }
 
@@ -40,70 +41,89 @@ function currentMemory() {
   }
 }
 
-function rememberTurn(userText, assistantText) {
+function appendChatLine(role, text, maxChars) {
   try {
+    const clean = String(text || "").trim().slice(0, maxChars);
+    if (!clean) return;
+
     const stored = localStorage.getItem(MEMORY_KEY) || "";
     const { base, chat } = splitMemory(stored);
-    const user = String(userText || "").trim().slice(0, 2_500);
-    const assistant = String(assistantText || "").trim().slice(0, 3_500);
-    if (!user || !assistant) return;
-
-    const turn = `USER: ${user}\nЗАИКА: ${assistant}`;
-    const nextChat = `${chat}${chat ? "\n\n" : ""}${turn}`;
+    const line = `${role}: ${clean}`;
+    const nextChat = `${chat}${chat ? "\n\n" : ""}${line}`;
     localStorage.setItem(MEMORY_KEY, composeMemory(base, nextChat));
   } catch {
-    // Memory is optional. A storage failure must never break Blueprint chat.
+    // Memory is optional. Storage problems must never break Blueprint chat.
   }
 }
 
 export default function ZaikaAutoMemory() {
   useEffect(() => {
-    const originalFetch = window.fetch.bind(window);
+    let installedFetch = null;
+    let previousFetch = null;
 
-    window.fetch = async (input, init = {}) => {
-      const rawUrl = typeof input === "string" ? input : input?.url || String(input);
-      let pathname = "";
-      try { pathname = new URL(rawUrl, window.location.href).pathname; } catch {}
+    // Install after sibling effects (notably reCAPTCHA) so this wrapper remains outermost.
+    const timer = window.setTimeout(() => {
+      previousFetch = window.fetch.bind(window);
 
-      if (pathname !== "/api/command/zaika" || window.location.pathname !== "/blueprint") {
-        return originalFetch(input, init);
-      }
+      installedFetch = async (input, init = {}) => {
+        const rawUrl = typeof input === "string" ? input : input?.url || String(input);
+        let pathname = "";
+        try { pathname = new URL(rawUrl, window.location.href).pathname.replace(/\/+$/, ""); } catch {}
 
-      let payload = null;
-      let nextInit = init;
-      if (typeof init?.body === "string") {
-        try {
-          payload = JSON.parse(init.body);
-          const memory = currentMemory();
-          nextInit = {
-            ...init,
-            body: JSON.stringify({ ...payload, ...(memory ? { memory } : {}) }),
-          };
-        } catch {
-          payload = null;
+        if (pathname !== "/api/command/zaika") {
+          return previousFetch(input, init);
         }
-      }
 
-      const response = await originalFetch(input, nextInit);
+        let payload = null;
+        let nextInit = init;
+        let reflectOnly = true;
 
-      if (response.ok && payload) {
-        const reflectOnly = Array.isArray(payload?.plan)
-          ? payload.plan.every((step) => String(step?.type || "").toLowerCase() === "reflect")
-          : true;
+        if (typeof init?.body === "string") {
+          try {
+            payload = JSON.parse(init.body);
+            reflectOnly = Array.isArray(payload?.plan)
+              ? payload.plan.every((step) => String(step?.type || "").toLowerCase() === "reflect")
+              : true;
 
-        if (reflectOnly) {
+            if (reflectOnly) {
+              // Inject only memory that existed before this request.
+              const memoryBeforeTurn = currentMemory();
+              nextInit = {
+                ...init,
+                body: JSON.stringify({ ...payload, ...(memoryBeforeTurn ? { memory: memoryBeforeTurn } : {}) }),
+              };
+
+              // Persist the user's message synchronously so the next request can recall it
+              // even if response parsing is delayed.
+              appendChatLine("USER", payload?.raw, 2_500);
+            }
+          } catch {
+            payload = null;
+          }
+        }
+
+        const response = await previousFetch(input, nextInit);
+
+        if (response.ok && payload && reflectOnly) {
           response.clone().json().then((data) => {
             if (data?.executed === true && typeof data?.output === "string") {
-              rememberTurn(payload.raw, data.output);
+              appendChatLine("ЗАИКА", data.output, 3_500);
             }
           }).catch(() => {});
         }
+
+        return response;
+      };
+
+      window.fetch = installedFetch;
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (installedFetch && window.fetch === installedFetch && previousFetch) {
+        window.fetch = previousFetch;
       }
-
-      return response;
     };
-
-    return () => { window.fetch = originalFetch; };
   }, []);
 
   return null;
