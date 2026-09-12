@@ -2,14 +2,29 @@
 
 import { useEffect } from "react";
 
-const MEMORY_KEY = "blueprint.zaika.memory";
 const MAX_MEMORY_CHARS = 20_000;
-const AUTO_MARKER = "\n\n--- ZAИКА AUTO-SAVED CHAT ---\n";
 const CHAT_RESERVE = 7_500;
 
-function splitMemory(value) {
+const BRAINS = {
+  "/api/command/zaika": {
+    key: "blueprint.zaika.memory",
+    marker: "--- ZAИКА AUTO-SAVED CHAT ---",
+    assistant: "ЗАИКА",
+  },
+  "/api/command/local": {
+    key: "blueprint.inka.memory",
+    marker: "--- ИНКА AUTO-SAVED CHAT ---",
+    assistant: "ИНКА",
+  },
+  "/api/command": {
+    key: "blueprint.local.memory",
+    marker: "--- ЛОКАЛ AUTO-SAVED CHAT ---",
+    assistant: "ЛОКАЛ",
+  },
+};
+
+function splitMemory(value, marker) {
   const text = String(value || "").trim();
-  const marker = AUTO_MARKER.trim();
   const index = text.indexOf(marker);
   if (index < 0) return { base: text, chat: "" };
   return {
@@ -18,39 +33,39 @@ function splitMemory(value) {
   };
 }
 
-function composeMemory(base, chat) {
+function composeMemory(base, chat, marker) {
   const cleanBase = String(base || "").trim();
   const cleanChat = String(chat || "").trim();
   if (!cleanChat) return cleanBase.slice(0, MAX_MEMORY_CHARS);
 
-  const marker = AUTO_MARKER;
-  const maxBase = Math.max(0, MAX_MEMORY_CHARS - marker.length - CHAT_RESERVE);
+  const separator = `\n\n${marker}\n`;
+  const maxBase = Math.max(0, MAX_MEMORY_CHARS - separator.length - CHAT_RESERVE);
   const keptBase = cleanBase.slice(0, maxBase);
-  const roomForChat = Math.max(0, MAX_MEMORY_CHARS - keptBase.length - marker.length);
+  const roomForChat = Math.max(0, MAX_MEMORY_CHARS - keptBase.length - separator.length);
   const keptChat = cleanChat.slice(-roomForChat);
-  return `${keptBase}${marker}${keptChat}`.trim();
+  return `${keptBase}${separator}${keptChat}`.trim();
 }
 
-function currentMemory() {
+function currentMemory(config) {
   try {
-    const stored = localStorage.getItem(MEMORY_KEY) || "";
-    const { base, chat } = splitMemory(stored);
-    return composeMemory(base, chat);
+    const stored = localStorage.getItem(config.key) || "";
+    const { base, chat } = splitMemory(stored, config.marker);
+    return composeMemory(base, chat, config.marker);
   } catch {
     return "";
   }
 }
 
-function appendChatLine(role, text, maxChars) {
+function appendChatLine(config, role, text, maxChars) {
   try {
     const clean = String(text || "").trim().slice(0, maxChars);
     if (!clean) return;
 
-    const stored = localStorage.getItem(MEMORY_KEY) || "";
-    const { base, chat } = splitMemory(stored);
+    const stored = localStorage.getItem(config.key) || "";
+    const { base, chat } = splitMemory(stored, config.marker);
     const line = `${role}: ${clean}`;
     const nextChat = `${chat}${chat ? "\n\n" : ""}${line}`;
-    localStorage.setItem(MEMORY_KEY, composeMemory(base, nextChat));
+    localStorage.setItem(config.key, composeMemory(base, nextChat, config.marker));
   } catch {
     // Memory is optional. Storage problems must never break Blueprint chat.
   }
@@ -70,7 +85,8 @@ export default function ZaikaAutoMemory() {
         let pathname = "";
         try { pathname = new URL(rawUrl, window.location.href).pathname.replace(/\/+$/, ""); } catch {}
 
-        if (pathname !== "/api/command/zaika") {
+        const config = BRAINS[pathname];
+        if (!config || window.location.pathname !== "/blueprint") {
           return previousFetch(input, init);
         }
 
@@ -86,16 +102,14 @@ export default function ZaikaAutoMemory() {
               : true;
 
             if (reflectOnly) {
-              // Inject only memory that existed before this request.
-              const memoryBeforeTurn = currentMemory();
+              const memoryBeforeTurn = currentMemory(config);
               nextInit = {
                 ...init,
                 body: JSON.stringify({ ...payload, ...(memoryBeforeTurn ? { memory: memoryBeforeTurn } : {}) }),
               };
 
-              // Persist the user's message synchronously so the next request can recall it
-              // even if response parsing is delayed.
-              appendChatLine("USER", payload?.raw, 2_500);
+              // Save the user's message immediately so the next request can recall it.
+              appendChatLine(config, "USER", payload?.raw, 2_500);
             }
           } catch {
             payload = null;
@@ -107,7 +121,7 @@ export default function ZaikaAutoMemory() {
         if (response.ok && payload && reflectOnly) {
           response.clone().json().then((data) => {
             if (data?.executed === true && typeof data?.output === "string") {
-              appendChatLine("ЗАИКА", data.output, 3_500);
+              appendChatLine(config, config.assistant, data.output, 3_500);
             }
           }).catch(() => {});
         }
