@@ -30,8 +30,8 @@ export default function CookieBanner() {
         <div>
           <strong>COOKIE NOTICE</strong>
           <p>
-            OrangeSoft uses essential browser storage to keep site preferences working.
-            By continuing, you accept this use.
+            OrangeSoft uses essential browser storage for site preferences and Google reCAPTCHA
+            for security and abuse prevention when reCAPTCHA is enabled.
           </p>
         </div>
         <button type="button" className="pixelButton cookieAccept" onClick={acceptCookies}>
