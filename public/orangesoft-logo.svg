@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" role="img" aria-labelledby="title desc">
+  <title id="title">OrangeSoft</title>
+  <desc id="desc">OrangeSoft wordmark with a stylised orange icon</desc>
+  <defs>
+    <linearGradient id="orange" x1="12" y1="10" x2="72" y2="82" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9D32"/>
+      <stop offset="1" stop-color="#F05A00"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(8 8)">
+    <path d="M39.7 7.5c6.9 0 13.2 2.2 18.4 5.9-8.8-.7-17.1 2.2-23.3 8.1-4.2 4-6.8 9-7.8 14.4-2.8-3.7-4.5-8.3-4.5-13.2 0-8.4 5.1-15.4 12.5-18.4 1.6-.6 3.1.5 4.7 3.2Z" fill="#7E9E23"/>
+    <circle cx="40" cy="46" r="34" fill="url(#orange)"/>
+    <path d="M40 22c13.3 0 24 10.7 24 24S53.3 70 40 70 16 59.3 16 46s10.7-24 24-24Zm0 8.5A15.5 15.5 0 1 0 40 61a15.5 15.5 0 0 0 0-31Z" fill="#FFF9F1"/>
+    <path d="M53.6 25.9c4.4 4.3 7.1 10.3 7.1 16.9 0 13.3-10.7 24-24 24-6.6 0-12.6-2.7-16.9-7.1A24 24 0 0 0 64 46c0-7.8-3.7-14.7-9.4-19.1Z" fill="#D94D00" opacity=".45"/>
+  </g>
+  <text x="100" y="61" fill="#171717" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="800" letter-spacing="-2">OrangeSoft</text>
+</svg>
