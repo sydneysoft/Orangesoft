@@ -1,8 +1,9 @@
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const OPENAI_URL = "https://api.openai.com/v1/responses";
 const INKA_REFLECT_GUIDANCE = `You are ИНКА, Blueprint Local Brain. Answer ordinary requests directly and helpfully.
-If the request depends on current/live information that is not present in the provided tool context (for example nearby businesses, maps, opening hours, prices, availability, weather, or news), do not give a generic refusal. Clearly say that ИНКА does not currently have live web/maps access, state what cannot be verified, and still provide useful non-live guidance without inventing current facts.
+If the request depends on current/live information that is not present in the provided tool context, do not invent current facts. The server normally intercepts live queries before they reach you. If one still reaches you, clearly state what cannot be verified.
 Treat dots in natural-language prompts as word separators when sensible. Use any LOCAL TOOL CONTEXT you receive as evidence. Keep the answer concise.
 
 USER REQUEST:\n`;
@@ -17,6 +18,101 @@ function bridgeUrl() {
   const parsed = new URL(value);
   if (parsed.protocol !== "https:") throw new Error("BLUEPRINT_LOCAL_BRIDGE_URL MUST USE HTTPS.");
   return value;
+}
+
+function extractOutputText(data) {
+  if (typeof data?.output_text === "string" && data.output_text.trim()) return data.output_text.trim();
+  const chunks = [];
+  for (const item of Array.isArray(data?.output) ? data.output : []) {
+    for (const part of Array.isArray(item?.content) ? item.content : []) {
+      if (part?.type === "output_text" && typeof part?.text === "string") chunks.push(part.text);
+    }
+  }
+  return chunks.join("\n").trim();
+}
+
+function normalizedReflectText(raw, plan) {
+  const reflectSteps = plan.filter((step) => String(step?.type || "").toLowerCase() === "reflect");
+  const text = reflectSteps.length
+    ? reflectSteps.map((step) => String(step?.normalized || step?.body || "")).join(" ")
+    : raw;
+  return text.replace(/[._-]+/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function shouldUseWebFallback(raw, plan) {
+  if (plan.some((step) => String(step?.type || "").toLowerCase() !== "reflect")) return false;
+  const text = normalizedReflectText(raw, plan);
+  if (!text) return false;
+
+  const livePatterns = [
+    /\bnear\b/, /\bnearby\b/, /\bclosest\b/, /\bnearest\b/,
+    /\bopen now\b/, /\bopening hours?\b/, /\bclosing time\b/,
+    /\btoday\b/, /\btonight\b/, /\btomorrow\b/, /\blatest\b/, /\bcurrent\b/, /\bright now\b/,
+    /\bprice\b/, /\bprices\b/, /\bcost\b/, /\bavailability\b/, /\bavailable\b/,
+    /\bweather\b/, /\bforecast\b/, /\btraffic\b/, /\bnews\b/,
+    /\bflight\b/, /\bflights\b/, /\btrain\b/, /\btrains\b/, /\bbus\b/, /\bbuses\b/,
+    /\brestaurant\b/, /\brestaurants\b/, /\bgym\b/, /\bgyms\b/, /\bhotel\b/, /\bhotels\b/,
+  ];
+  return livePatterns.some((pattern) => pattern.test(text));
+}
+
+async function runWebFallback(raw, plan) {
+  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+  if (!apiKey) {
+    return {
+      ok: false,
+      status: 503,
+      output: "ИНКА LIVE QUERY GUARD ACTIVE. This request needs current web data, but the web fallback is not configured. No answer was guessed.",
+      model: "blueprint-local",
+    };
+  }
+
+  const model = String(process.env.BLUEPRINT_WEB_FALLBACK_MODEL || process.env.BLUEPRINT_OPENAI_MODEL || "gpt-5.6-luna").trim();
+  const prompt = normalizedReflectText(raw, plan) || raw;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 50_000);
+
+  try {
+    const response = await fetch(OPENAI_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+        "user-agent": "OrangeSoft-Blueprint-Inka-Web-Fallback",
+      },
+      body: JSON.stringify({
+        model,
+        tools: [{ type: "web_search", search_context_size: "medium" }],
+        instructions: "You are the live web fallback for ИНКА inside OrangeSoft Blueprint. Use web search for the user's current/local request. Treat dots as word separators and resolve obvious concatenated place names when searching. Never invent a business, location, opening hour, price, availability, route, or other live fact. If the place is ambiguous, say exactly what is ambiguous. Give a concise practical answer and identify that live web search was used.",
+        input: prompt,
+        max_output_tokens: 1000,
+      }),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = data?.error?.message || data?.error || `OPENAI HTTP ${response.status}`;
+      return { ok: false, status: response.status >= 400 && response.status < 600 ? response.status : 502, output: `ИНКА WEB FALLBACK ERROR: ${detail}`, model };
+    }
+
+    const output = extractOutputText(data);
+    return {
+      ok: true,
+      status: 200,
+      output: output || "ИНКА WEB FALLBACK COMPLETED WITHOUT A TEXT RESPONSE.",
+      model,
+      activity: [{ tool: "web_search_fallback", ok: true, provider: "openai", model }],
+    };
+  } catch (error) {
+    const message = error?.name === "AbortError"
+      ? "ИНКА WEB FALLBACK TIMED OUT. No live answer was guessed."
+      : `ИНКА WEB FALLBACK UNREACHABLE: ${error instanceof Error ? error.message : String(error)}`;
+    return { ok: false, status: 503, output: message, model };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function POST(request) {
@@ -53,12 +149,27 @@ export async function POST(request) {
   if (unsupported.length) {
     return json({
       executed: false,
-      output: "LOCAL READ TOOLS ARE ACTIVE. Use LOCAL for normal chat, reflect(...), inspect(...), and find(...). File changes and deployment still require CLOUD until the local write adapters are enabled.",
+      output: "LOCAL READ TOOLS ARE ACTIVE. Use ИНКА for normal chat, reflect(...), inspect(...), and find(...). File changes and deployment still require ЛОКАЛ until the local write adapters are enabled.",
       provider: "ollama",
       model: "blueprint-local",
       local: true,
       tools: ["reflect", "inspect", "find"],
     }, 409);
+  }
+
+  if (shouldUseWebFallback(raw, plan)) {
+    const fallback = await runWebFallback(raw, plan);
+    return json({
+      executed: fallback.ok,
+      output: fallback.output,
+      activity: fallback.activity || [{ tool: "live_query_guard", ok: false }],
+      provider: "inka-web-fallback",
+      model: fallback.model,
+      local: false,
+      fallback: true,
+      tools: ["reflect", "web_search"],
+      guard: "inka-live-query-v1",
+    }, fallback.status);
   }
 
   const forwardedPlan = plan.map((step) => {
@@ -115,7 +226,7 @@ export async function POST(request) {
       model: data?.model || "blueprint-local",
       local: true,
       tools: ["reflect", "inspect", "find"],
-      guidance: "inka-live-data-limit-v1",
+      guidance: "inka-no-hallucinated-live-data-v2",
     });
   } catch (error) {
     const message = error?.name === "AbortError"
