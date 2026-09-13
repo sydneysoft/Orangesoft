@@ -1,5 +1,6 @@
 import RecaptchaFetchGuard from "./RecaptchaFetchGuard";
 import ZaikaAutoMemory from "./ZaikaAutoMemory";
+import BlueprintPrivacyScrub from "./BlueprintPrivacyScrub";
 
 export const metadata = {
   title: "OrangeSoft — Software, AI & Digital Products",
@@ -12,6 +13,7 @@ export default function RootLayout({ children }) {
       <body>
         <RecaptchaFetchGuard />
         <ZaikaAutoMemory />
+        <BlueprintPrivacyScrub />
         {children}
       </body>
     </html>
