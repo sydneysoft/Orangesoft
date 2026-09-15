@@ -1,0 +1,47 @@
+import { createInstagramPost, findInstagramChannel, getScheduledPosts, isBufferConfigured } from "../../../../lib/buffer";
+
+export const dynamic = "force-dynamic";
+
+const posts = [
+  {
+    dueAt: "2026-09-17T18:00:00.000Z",
+    imageUrl: "https://www.orangesoft.uk/api/storylingo-card",
+    altText: "StoryLingo multilingual reading library with language-learning features",
+    text: `A story is easier to remember than a vocabulary list. 📚🌍\n\nStoryLingo keeps reading, translation and vocabulary together, so you can stay inside the story while learning from context. Read across English, Ukrainian, Polish, French, German and Spanish.\n\nExplore: storylingo.uk\n\n#languagelearning #languages #learning #vocabulary #languagestudy #studygram #reading #polyglot`
+  },
+  {
+    dueAt: "2026-09-19T11:00:00.000Z",
+    imageUrl: "https://storylingo.uk/covers-lite/ukrainian-folk-tales.webp",
+    altText: "Ukrainian Folk Tales illustrated collection in StoryLingo",
+    text: `Thirteen Ukrainian folk tales. One illustrated collection. 🇺🇦📖\n\nUkrainian Folk Tales brings traditional stories into StoryLingo for immersive reading and language practice — and the illustrated volume is also available as a book.\n\nRead on StoryLingo: storylingo.uk\nBook on Amazon UK: https://www.amazon.co.uk/dp/B0H48CGNCZ\n\n#bookstagram #books #booklover #reading #booksofinstagram #folklore #folktales #ukrainian #ukrainianbooks`
+  },
+  {
+    dueAt: "2026-09-21T17:30:00.000Z",
+    imageUrl: "https://www.orangesoft.uk/api/storylingo-card",
+    altText: "StoryLingo interface highlighting multilingual reading and vocabulary practice",
+    text: `Don’t stop reading every time you meet a new word.\n\nIn StoryLingo, translation and vocabulary stay close to the text. Learn the word where it actually appears, then practise it in context instead of memorising it in isolation. ✍️📚\n\nstorylingo.uk\n\n#vocabulary #languagelearning #learninglanguages #languages #languagestudy #learning #reading #study`
+  },
+  {
+    dueAt: "2026-09-22T11:30:00.000Z",
+    imageUrl: "https://www.orangesoft.uk/api/storylingo-card",
+    altText: "StoryLingo library showing stories available across six languages",
+    text: `One story. Six languages. 🔑🌍\n\nThe Lost Key is StoryLingo’s shared-language story: read the same narrative in English, Ukrainian, Polish, French, German or Spanish, then switch versions to compare familiar scenes and phrases.\n\nOpen the library: storylingo.uk\n\n#languagelearning #languages #polyglot #learnlanguages #reading #vocabulary #languagestudy #studygram`
+  }
+];
+
+export async function GET() {
+  if (!isBufferConfigured()) return Response.json({ ok:false, message:"BUFFER_API_KEY is not configured." }, {status:503});
+  try {
+    const match = await findInstagramChannel("storylingo.uk");
+    if (!match) return Response.json({ok:false,message:"Could not find @storylingo.uk in Buffer."},{status:404});
+    const existing = await getScheduledPosts(match.organization.id, match.channel.id);
+    const created = [];
+    for (const item of posts) {
+      if (existing.some(p => p.text === item.text)) continue;
+      created.push(await createInstagramPost({ channelId: match.channel.id, ...item }));
+    }
+    return Response.json({ok:true, existing:existing.length, created});
+  } catch (error) {
+    return Response.json({ok:false,message:error instanceof Error?error.message:"Weekly queue failed."},{status:502});
+  }
+}
