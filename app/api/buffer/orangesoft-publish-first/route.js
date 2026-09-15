@@ -1,19 +1,4 @@
-import { getBufferPost, publishPostNow } from "../../../../lib/buffer";
-
+import { createInstagramPost, findInstagramChannel, isBufferConfigured } from "../../../../lib/buffer";
 export const dynamic = "force-dynamic";
-
-const postId = "6aa971ba02bda32caae8814d";
-const imageUrl = "https://www.orangesoft.uk/api/orangesoft-social-card?card=research";
-const altText = "OrangeSoft research card about artificial intelligence and advanced computing";
-
-export async function GET() {
-  try {
-    const post = await getBufferPost(postId);
-    if (!post) return Response.json({ ok: false, message: "OrangeSoft post not found." }, { status: 404 });
-    if (post.sentAt || post.status === "sent") return Response.json({ ok: true, alreadyPublished: true, post });
-    const published = await publishPostNow(postId, { text: post.text, imageUrl, altText });
-    return Response.json({ ok: true, published });
-  } catch (error) {
-    return Response.json({ ok: false, message: error instanceof Error ? error.message : "Publish failed." }, { status: 502 });
-  }
-}
+const text = `OrangeSoft develops technology across software, computing and digital products.\n\nOur current projects include:\n\nOrangeSoft OS — an operating system built by OrangeSoft, exploring our own approach to the desktop and computing environment.\n\nBlueprint — our own programming language, designed around a different way of expressing commands, logic and software instructions.\n\nStoryLingo — a multilingual reading platform where stories become an interactive way to read, explore vocabulary and practise languages.\n\nFollow OrangeSoft to watch these projects develop, see what we’re working on behind the scenes, and be among the first to try what we release next.\n\n#OrangeSoft #Technology #Programming #ProgrammingLanguage #OperatingSystems #Software #StoryLingo #Blueprint`;
+export async function GET(){if(!isBufferConfigured())return Response.json({ok:false,message:"BUFFER_API_KEY is not configured."},{status:503});try{const match=await findInstagramChannel("orangesoft.uk");if(!match)return Response.json({ok:false,message:"Could not find @orangesoft.uk in Buffer."},{status:404});const published=await createInstagramPost({channelId:match.channel.id,text,imageUrl:"https://www.orangesoft.uk/api/orangesoft-social-card?card=research",altText:"OrangeSoft projects across software computing and digital products",shareNow:true});return Response.json({ok:true,published});}catch(error){return Response.json({ok:false,message:error instanceof Error?error.message:"Publish failed."},{status:502});}}
