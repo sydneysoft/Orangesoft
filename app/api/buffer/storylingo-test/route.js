@@ -1,10 +1,14 @@
 import {
   createInstagramPost,
   findInstagramChannel,
+  getScheduledPosts,
   isBufferConfigured,
+  publishPostNow,
 } from "../../../../lib/buffer";
 
 export const dynamic = "force-dynamic";
+
+const TEXT = "Stories make language memorable. 📚🌍\n\nStoryLingo helps you learn through illustrated stories, multilingual reading and vocabulary in context.\n\nExplore the library at storylingo.uk\n\n#StoryLingo #LanguageLearning #LearnThroughStories #LearnLanguages";
 
 export async function GET() {
   if (!isBufferConfigured()) {
@@ -23,22 +27,28 @@ export async function GET() {
       );
     }
 
-    const post = await createInstagramPost({
-      channelId: match.channel.id,
-      dueAt: "2026-09-15T12:50:00.000Z",
-      text: "Stories make language memorable. 📚🌍\n\nStoryLingo helps you learn through illustrated stories, multilingual reading and vocabulary in context.\n\nExplore the library at storylingo.uk\n\n#StoryLingo #LanguageLearning #LearnThroughStories #LearnLanguages",
-      imageUrl: "https://raw.githubusercontent.com/sydneysoft/hellboychronicles/main/covers-lite/folk-collection.webp",
-      altText: "StoryLingo illustrated folk tales collection",
-    });
+    const scheduled = await getScheduledPosts(match.organization.id, match.channel.id);
+    const existing = scheduled.find((post) => post.text === TEXT);
+
+    const post = existing
+      ? await publishPostNow(existing.id)
+      : await createInstagramPost({
+          channelId: match.channel.id,
+          mode: "shareNow",
+          text: TEXT,
+          imageUrl: "https://raw.githubusercontent.com/sydneysoft/hellboychronicles/main/covers-lite/folk-collection.webp",
+          altText: "StoryLingo illustrated folk tales collection",
+        });
 
     return Response.json({
       ok: true,
       account: match.channel.displayName || match.channel.name || "storylingo.uk",
+      action: existing ? "published-existing" : "published-new",
       post,
     });
   } catch (error) {
     return Response.json(
-      { ok: false, message: error instanceof Error ? error.message : "Buffer test post failed." },
+      { ok: false, message: error instanceof Error ? error.message : "Buffer publish-now failed." },
       { status: 502 }
     );
   }
