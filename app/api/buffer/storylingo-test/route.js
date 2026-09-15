@@ -9,6 +9,8 @@ import {
 export const dynamic = "force-dynamic";
 
 const TEXT = "Stories make language memorable. 📚🌍\n\nStoryLingo helps you learn through illustrated stories, multilingual reading and vocabulary in context.\n\nExplore the library at storylingo.uk\n\n#StoryLingo #LanguageLearning #LearnThroughStories #LearnLanguages";
+const IMAGE_URL = "https://raw.githubusercontent.com/sydneysoft/hellboychronicles/main/covers-lite/folk-collection.webp";
+const ALT_TEXT = "StoryLingo illustrated folk tales collection";
 
 export async function GET() {
   if (!isBufferConfigured()) {
@@ -31,13 +33,17 @@ export async function GET() {
     const existing = scheduled.find((post) => post.text === TEXT);
 
     const post = existing
-      ? await publishPostNow(existing.id)
+      ? await publishPostNow(existing.id, {
+          text: TEXT,
+          imageUrl: IMAGE_URL,
+          altText: ALT_TEXT,
+        })
       : await createInstagramPost({
           channelId: match.channel.id,
           mode: "shareNow",
           text: TEXT,
-          imageUrl: "https://raw.githubusercontent.com/sydneysoft/hellboychronicles/main/covers-lite/folk-collection.webp",
-          altText: "StoryLingo illustrated folk tales collection",
+          imageUrl: IMAGE_URL,
+          altText: ALT_TEXT,
         });
 
     return Response.json({
